@@ -17,8 +17,8 @@ func (db *Database) SaveUser(user *User) error {
 		Member: user.Username,
 	}
 	pipe := db.Client.TxPipeline()
-	pipe.ZAdd(Ctx, "leaderboard", member)
-	rank := pipe.ZRank(Ctx, leaderboardKey, user.Username)
+	pipe.ZAdd(Ctx, leaderboardKey, member)
+	rank := pipe.ZRevRank(Ctx, leaderboardKey, user.Username)
 	_, err := pipe.Exec(Ctx)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (db *Database) SaveUser(user *User) error {
 func (db *Database) GetUser(username string) (*User, error) {
 	pipe := db.Client.TxPipeline()
 	score := pipe.ZScore(Ctx, leaderboardKey, username)
-	rank := pipe.ZRank(Ctx, leaderboardKey, username)
+	rank := pipe.ZRevRank(Ctx, leaderboardKey, username)
 	_, err := pipe.Exec(Ctx)
 	if err != nil {
 		return nil, err

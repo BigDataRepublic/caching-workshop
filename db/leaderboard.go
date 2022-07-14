@@ -8,7 +8,7 @@ type Leaderboard struct {
 }
 
 func (db *Database) GetLeaderboard() (*Leaderboard, error) {
-	scores := db.Client.ZRangeWithScores(Ctx, leaderboardKey, 0, -1)
+	scores := db.Client.ZRevRangeWithScores(Ctx, leaderboardKey, 0, -1)
 	if scores == nil {
 		return nil, ErrNil
 	}
