@@ -1,31 +1,38 @@
 package db
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v8"
 )
 
 type User struct {
 	Username string `json:"username" binding:"required"`
-	Points   int    `json:"points" binding:"required"`
+	Points   int    `json:"points"`
 	Rank     int    `json:"rank"`
 }
 
-func (db *Database) SaveUser(user *User) error {
-	member := &redis.Z{
-		Score:  float64(user.Points),
-		Member: user.Username,
-	}
+func (db *Database) SaveUser(user *User) (*User, error) {
 	pipe := db.Client.TxPipeline()
-	pipe.ZAdd(Ctx, leaderboardKey, member)
-	rank := pipe.ZRevRank(Ctx, leaderboardKey, user.Username)
-	_, err := pipe.Exec(Ctx)
-	if err != nil {
-		return err
+
+	if user.Points != 0 {
+		member := &redis.Z{
+			Score:  float64(user.Points),
+			Member: user.Username,
+		}
+		pipe.ZAdd(Ctx, leaderboardKey, member)
+	} else {
+		pipe.ZIncrBy(Ctx, leaderboardKey, 1, user.Username)
 	}
-	fmt.Println(rank.Val(), err)
+
+	rank := pipe.ZRevRank(Ctx, leaderboardKey, user.Username)
+	points := pipe.ZScore(Ctx, leaderboardKey, user.Username)
+	_, err := pipe.Exec(Ctx)
+
+	if err != nil {
+		return nil, ErrNil
+	}
 	user.Rank = int(rank.Val())
-	return nil
+	user.Points = int(points.Val())
+	return user, nil
 }
 
 func (db *Database) GetUser(username string) (*User, error) {

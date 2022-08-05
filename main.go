@@ -5,6 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"log"
 )
@@ -13,6 +15,7 @@ var (
 	ListenAddr  = "localhost:8080"
 	RedisAddr   = "localhost:6379"
 	RedisPasswd = os.Getenv("REDIS_PASSWORD")
+	FastRivals  = strings.ToLower(os.Getenv("FAST_RIVALS"))
 )
 
 func initRouter(database *db.Database) *gin.Engine {
@@ -24,12 +27,12 @@ func initRouter(database *db.Database) *gin.Engine {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		err := database.SaveUser(&userJson)
+		user, err := database.SaveUser(&userJson)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"user": userJson})
+		c.JSON(http.StatusOK, gin.H{"user": user})
 	})
 
 	r.GET("/points/:username", func(c *gin.Context) {
@@ -72,12 +75,29 @@ func initRouter(database *db.Database) *gin.Engine {
 	return r
 }
 
+func backgroundTasks(database *db.Database) {
+	for range time.Tick(time.Second * 10) {
+		err := database.UpdateRivals()
+		if err != nil {
+			log.Printf("Background task failed: %s", err)
+		}
+	}
+}
+
 func main() {
 	database, err := db.NewDatabase(RedisAddr, RedisPasswd)
 	if err != nil {
 		log.Fatalf("Failed to connect to redis: %s", err.Error())
 	}
 
+	if FastRivals == "true" {
+		log.Println("Fast rivals enabled, will run background process to update rival cache")
+		go backgroundTasks(database)
+	}
+
 	router := initRouter(database)
-	router.Run(ListenAddr)
+	err = router.Run(ListenAddr)
+	if err != nil {
+		log.Fatalf("Router crashed with: %s", err)
+	}
 }

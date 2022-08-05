@@ -9,9 +9,7 @@ docker compose up
 
 Then run the code with the 
 ```
-go build
-
-REDIS_PASSWORD=best_pass_ever ./caching-workshop
+go build; REDIS_PASSWORD=best_pass_ever FAST_RIVALS=true ./caching-workshop
 ```
 
 ## Interacting with the app
@@ -21,8 +19,10 @@ You can add some extra users with:
 ```
 And see the data with other commands like:
 ```bash
-# Add extra users
+# Add extra users, optionally with starting points
 curl -s  -H "Content-type: application/json" -d '{"username": "superstar", "points": 99}' localhost:8080/points
+# Increment user score or add new user
+curl -s  -H "Content-type: application/json" -d '{"username": "superstar"}' localhost:8080/points
 # Get current values for eddie
 curl -s -H "Content-type: application/json" localhost:8080/points/eddie
 # See the entire leaderboard

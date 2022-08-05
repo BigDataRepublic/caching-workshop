@@ -1,6 +1,11 @@
 package db
 
-import "time"
+import (
+	"log"
+	"time"
+)
+
+var rivalKey = "rival"
 
 func (db *Database) CalculateRivalSlow(username string) (*User, error) {
 	rank := db.Client.ZRevRank(Ctx, leaderboardKey, username).Val()
@@ -24,6 +29,25 @@ func (db *Database) CalculateRivalSlow(username string) (*User, error) {
 }
 
 func (db *Database) GetRival(username string) (*User, error) {
-	// TODO implement faster response using cache
-	return db.CalculateRivalSlow(username)
+	rival := db.Client.HGet(Ctx, rivalKey, username).Val()
+	if len(rival) == 0 {
+		log.Printf("Rival data not available, will calculate ad hoc")
+		return db.CalculateRivalSlow(username)
+	} else {
+		return db.GetUser(rival)
+	}
+}
+
+func (db *Database) UpdateRivals() error {
+	rivalData := db.Client.ZRevRange(Ctx, leaderboardKey, 0, -1).Val()
+	mappedData := make(map[string]string)
+	for i := 0; i < len(rivalData); i += 1 {
+		// First player will just need to fight the second always
+		rivalDataPlus := append([]string{rivalData[1]}, rivalData...)
+		mappedData[rivalData[i]] = rivalDataPlus[i]
+	}
+	// This is really difficult
+	time.Sleep(2 * time.Second)
+
+	return db.Client.HSet(Ctx, rivalKey, mappedData).Err()
 }
