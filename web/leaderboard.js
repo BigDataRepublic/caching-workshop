@@ -38,6 +38,8 @@ function processData(response) {
         const buttonGetRival = document.createElement('button');
         buttonGetRival.setAttribute('class', 'btn btn-outline-dark col-3 offset-2');
         buttonGetRival.textContent = "Get rival"
+        buttonGetRival.setAttribute("id", `button-${user.username}`);
+        buttonGetRival.onclick = function(){getRival(user.username, buttonGetRival.id)}
 
         wrapper.appendChild(card);
         card.appendChild(h1);
@@ -72,8 +74,23 @@ function incrementUser(username) {
     }
 
     updateRequest.send(JSON.stringify({ "username": username}));
+}
 
-    // document.getElementById("demo").innerHTML = "YOU CLICKED ME!";
+function getRival(username, buttonId) {
+    const rivalRequest = new XMLHttpRequest();
+    rivalRequest.open('GET', `http://localhost:8080/rival/${username}`, true);
+    const button = document.getElementById(buttonId);
+    rivalRequest.onload = function () {
+        if (rivalRequest.status >= 200 && rivalRequest.status < 400) {
+            const data = JSON.parse(this.response).user;
+            button.textContent = `Rival found: ${data.username}`
+        } else {
+            const errorMessage = document.createElement('marquee');
+            button.textContent = `Rival not found: ${errorMessage}`
+        }
+    }
+
+    rivalRequest.send();
 }
 
 loadPage()
