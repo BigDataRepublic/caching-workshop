@@ -2,6 +2,7 @@ package main
 
 import (
 	"caching-workshop/db"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -20,6 +21,18 @@ var (
 
 func initRouter(database *db.Database) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "PUT", "POST"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			return true
+		},
+		MaxAge: 12 * time.Hour,
+	}))
 
 	r.POST("/points", func(c *gin.Context) {
 		var userJson db.User
